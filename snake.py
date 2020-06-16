@@ -2,8 +2,8 @@ import pygame
 import random
 import nn
 
-TOTAL = None
-brains = []
+SIZE_POP = 3
+GENERATION = []
 
 rows = 10
 width = 300
@@ -12,6 +12,10 @@ UP = [1.0, 0.0, 0.0, 0.0]
 RIGHT = [0.0, 1.0, 0.0, 0.0]
 DOWN = [0.0, 0.0, 1.0, 0.0]
 LEFT = [0.0, 0.0, 0.0, 1.0]
+
+def apply_on_all(seq, method, *args, **kwargs):
+    for obj in seq:
+         getattr(obj, method)(*args, **kwargs)
 
 class Cube(object):
     global rows, width, sqrt2
@@ -54,27 +58,35 @@ class Cube(object):
 
 class Snake(object):
     global rows, width, sqrt2, UP, DOWN, LEFT, RIGHT
-    body = []
-    turns = {}
         
     def __init__(self, color, pos):
-        self.head = Cube(pos, color=color)
+        self.head = Cube(pos)
+        self.body = []
         self.body.append(self.head)
+        self.turns = {}
         self.dirx = 0
         self.diry = 1
-        self.brain = nn.NeuralNetwork([28, 20, 12, 4])
-        self.color = color
         self.score = 0
+        self.fitness = 0
         self.total_steps = 0
         self.steps_since_last_food = 0
-        self.fitness = 0
+        self.brain = nn.NeuralNetwork([28, 20, 12, 4])
     
     def think(self, snack):
+        ''''
+        Performs:
+        1. Forward pass through neural network.
+        2. Moves as per output of neural network.
+        3. Increments total_steps and steps_since_last_food variable.
+        4. If steps_since_last_food exceeds 100 returns True.
+        5. returns False otherwise.
+        '''
         move, _ = self.brain.feedforward(self.vision(snack))
         move = nn.to_one_hot(move)
         self.total_steps += 1
         self.steps_since_last_food += 1
-        if(self.steps_since_last_food == 100): self.reset((5,5))
+        if(self.steps_since_last_food == 100):
+            return True
 
         if move == LEFT and (self.dirx != 1 and self.diry != 0):
             self.dirx = -1
@@ -105,6 +117,7 @@ class Snake(object):
                     self.turns.pop(p)
             else:
                 c.move(c.dirx, c.diry)
+        return False
 
     def vision(self, snack):
         x, y = self.head.pos
@@ -296,52 +309,94 @@ def randomSnack(snake):
 def redrawWindow(window, snake, snack):
     global rows, width
     window.fill((0,0,0))
-    snake.draw(window)
-    snack.draw(window)
+    #snake.draw(window)
+    #snack.draw(window)
+    apply_on_all(snake, 'draw', (window))
+    apply_on_all(snack, 'draw', (window))
     pygame.display.update()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
 
 def main():
-    global width, rows, brains
+    '''
+    Runs the game i.e the current generation.
+    '''
+    global width, rows
+
+    snake_population = []
+    snacks = []
+    to_be_killed = []
+
     snakePos = (5,5)
     win = pygame.display.set_mode((width, width))
-    snake = Snake((255,0,0), snakePos)
-    snack = Cube(randomSnack(snake), color=(0,0,255))
+
+    # Create SIZE_POP snakes and corresponding snacks. Snake [i] can only 'interact' with snack[i].
+    for i in range(SIZE_POP):
+        snake_population.append(Snake((255,0,0), snakePos))
+        snacks.append(Cube(randomSnack(snake_population[i]), color=(0,0,255)))
+
     flag = True
     clock = pygame.time.Clock()
+    
     while flag:
         pygame.time.delay(50)
-        clock.tick(10)
-        #snake.move()
-        snake.think(snack)
+        clock.tick(5)
+        # snake.move()
+
+        def check_conditions(snake, snack):
+            '''
+            Checks:
+            1. If snake "ate" the food.
+            2. If snake collides with wall. returns True.
+            3. If snake collides with itself. returns True.
+            
+            returns False if snake did not die.
+            '''
+            if snake.body[0].pos == snack.pos:
+                snake.addCube()
+                snake.score += 1
+                snake.steps_since_last_food = 0
+                snack.pos = randomSnack(snake)
+            
+            if snake.body[0].pos[0] > rows-1 or snake.body[0].pos[0] < 0 or snake.body[0].pos[1] > rows-1 or snake.body[0].pos[1] < 0:
+                return True
+                #TODO: Instead of reset, save copy of snake and kill it (Remove from list maybe?).
+            
+            for x in range(len(snake.body)):
+                if snake.body[x].pos in list(map(lambda z:z.pos, snake.body[x+1:])):
+                    return True
+                    #TODO: Instead of reset, save copy of snake and kill it (Remove from list maybe?).
+            
+            return False
+
+        # Iterate through all snakes. Indices of dead snakes (if any) are appended to to_be_killed list
+        for i, _ in enumerate(snake_population):
+            snake_dead = snake_population[i].think(snacks[i])
+            snake_dead2 = check_conditions(snake_population[i], snacks[i])
+            if snake_dead or snake_dead2:
+                to_be_killed.insert(0, i)
         
-        if snake.body[0].pos == snack.pos:
-            snake.addCube()
-            snake.score += 1
-            snake.steps_since_last_food = 0
-            snack.pos = randomSnack(snake)
-        
-        if snake.body[0].pos[0] > rows-1 or snake.body[0].pos[0] < 0 or snake.body[0].pos[1] > rows-1 or snake.body[0].pos[1] < 0:
-            brains.append({'brain': snake.brain})
-            snake.reset(snakePos)
-            #TODO:
-            #pygame.quit()
-        
-        for x in range(len(snake.body)):
-            if snake.body[x].pos in list(map(lambda z:z.pos, snake.body[x+1:])):
-                snake.reset(snakePos)
-                #TODO:
-                break
-        
-        redrawWindow(win, snake, snack)
+        # Iterate through snakes to be killed and remove them from list.
+        if not to_be_killed == False:
+            for i in to_be_killed:
+                GENERATION.append(snake_population.pop(i))
+                del snacks[i]
+        to_be_killed = []
+
+        if len(snake_population) == 0:
+            # TODO: If all snakes are dead. Create new gen.
+            print(GENERATION[0].total_steps)
+            print(GENERATION[1].total_steps)
+            print(GENERATION[2].total_steps)
+            pygame.quit()
+            return
+
+        # Drawing logic comment if not wanted.
+        redrawWindow(win, snake_population, snacks)
 
 
-# TODO: After snake dies, save instance of brain nn (in a list maybe?).
-# TODO: Generate a new snake.
-# TODO: Do this for entirety of population. At the end calculate fitness, perform crossover, mutation.
-# TODO: Generate new population. Repeat.
+# TODO: Calculate fitness, perform crossover, mutation.
 # TODO: OPTIONAL: Save all the weights of last population to continue training.
 # TODO: OPTIONAL: Save the weights of best performing snake.
 
