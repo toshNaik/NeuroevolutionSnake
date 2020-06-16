@@ -5,7 +5,7 @@ import ga
 import pickle
 
 best_individuals = []
-SIZE_POP = 4 #Must be even
+SIZE_POP = 1000 #Must be even
 GENERATION = []
 
 ROWS = 10
@@ -367,7 +367,7 @@ def redrawWindow(window, snake, snack):
         if event.type == pygame.QUIT:
             pygame.quit()
 
-def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view = False):
+def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view = False, brain = None):
     '''
     Runs the game i.e the current generation.
     1. gui: To draw or not.
@@ -407,9 +407,14 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
     win = pygame.display.set_mode((WIDTH, WIDTH))
 
     # Create SIZE_POP snakes and corresponding snacks. Snake [i] can only 'interact' with snack[i].
-    for i in range(SIZE_POP):
-        snake_population.append(Snake((255,0,0), snakePos))
-        snacks.append(Cube(randomSnack(snake_population[i]), color=(0,0,255)))
+    if view == False:
+        for i in range(SIZE_POP):
+            snake_population.append(Snake((255,0,0), snakePos))
+            snacks.append(Cube(randomSnack(snake_population[i]), color=(0,0,255)))
+
+    elif view == True:
+        snake_population.append(Snake((255,0,0), snakePos, brain = brain))
+        snacks.append(Cube(randomSnack(snake_population[0]), color=(0,0,255)))
 
     flag = True
     clock = pygame.time.Clock()
@@ -435,6 +440,8 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
 
         # End of a generation
         if len(snake_population) == 0:
+            if view == True:
+                pygame.quit()
             snake_population, best = ga.nextGeneration(GENERATION, SIZE_POP, Snake, ((255,0,0)), (snakePos))
             best_individuals.append(best)
             GENERATION = []
@@ -452,8 +459,13 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
 # TODO: Calculate Perform crossover, mutation.
 # TODO: OPTIONAL: Save all the weights of last population to continue training.
 # TODO: OPTIONAL: Save the weights of best performing snake.
+def main():
+    play_game(True, speed=40, number_of_gen=200)
+    pygame.quit()
+    filehandler = open('best_individuals.obj', 'wb')
+    pickle.dump(best_individuals, filehandler)
+    filehandler.close()
 
-play_game(True, 10, number_of_gen=1)
-filehandler = open('best_individuals.obj', 'wb')
-pickle.dump(best_individuals, filehandler)
-pygame.quit()
+if __name__ == '__main__':
+    main()
+    print('Done!')

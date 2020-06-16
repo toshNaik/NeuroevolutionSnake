@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 
 def sigmoid(x):
   return 1 / (1 + np.exp(-x))
@@ -27,8 +28,7 @@ class NeuralNetwork:
 
 
     def copy(self):
-        newCopy = NeuralNetwork(self.layers, parameters_provided = self.parameters)
-        return newCopy
+        return copy.deepcopy(self)
 
     def feedforward(self, inputs):
         def forward_one(A_prev, W, b):
@@ -85,8 +85,11 @@ def random_uniform_mutation(chromosome, prob_mutation):
 # X3 = [-0.512, 0.41, 0.123, -0.214, 0.4231]
 # X4 = [-0.901, -0.1, 0.5631, 0.4, -0.2131]
 # X5 = [0.85, 0.12, 0.23, -0.211, -0.45]
+# print(brain1.parameters['b2'])
+# print('\n')
+# print(brain2.parameters['b2'])
+# print('\n')
 
-# brain = NeuralNetwork([10, 6, 4])
 # A, _ = brain.feedforward(X1)
 # print('----------------')
 
