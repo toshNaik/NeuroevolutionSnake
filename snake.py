@@ -1,8 +1,11 @@
 import pygame
 import random
 import nn
+import ga
+import pickle
 
-SIZE_POP = 3
+best_individuals = []
+SIZE_POP = 4 #Must be even
 GENERATION = []
 
 ROWS = 10
@@ -19,7 +22,7 @@ def apply_on_all(sequence, method, *args, **kwargs):
     Helper function to apply obj.method(*args(**kwargs)) on seq of objects
     '''
     for obj in sequence:
-         getattr(obj, method)(*args, **kwargs)
+        getattr(obj, method)(*args, **kwargs)
 
 class Cube(object):
     global ROWS, WIDTH, SQRT2
@@ -81,18 +84,21 @@ class Cube(object):
 class Snake(object):
     global ROWS, WIDTH, SQRT2, UP, DOWN, LEFT, RIGHT
         
-    def __init__(self, color, pos):
+    def __init__(self, color, pos, brain = None):
         self.head = Cube(pos)
         self.body = []
         self.body.append(self.head)
         self.turns = {}
         self.dirx = 0
         self.diry = 1
+        if brain == None:
+            self.brain = nn.NeuralNetwork([28, 20, 12, 4])
+        else:
+            self.brain = brain
         self.score = 0
         self.fitness = 0
         self.total_steps = 0
         self.steps_since_last_food = 0
-        self.brain = nn.NeuralNetwork([28, 20, 12, 4])
     
     def think(self, snack):
         ''''
@@ -361,14 +367,14 @@ def redrawWindow(window, snake, snack):
         if event.type == pygame.QUIT:
             pygame.quit()
 
-def play_game(gui = False, speed = 10, snakePos = (5,5)):
+def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view = False):
     '''
     Runs the game i.e the current generation.
     1. gui: To draw or not.
     2. speed: Speed of animation.
     3. snakePos: Spawn location of snake.
     '''
-    global WIDTH, ROWS
+    global WIDTH, ROWS, GENERATION
     def check_conditions(snake, snack):
         '''
         Checks:
@@ -394,7 +400,7 @@ def play_game(gui = False, speed = 10, snakePos = (5,5)):
                 #TODO: Instead of reset, save copy of snake and kill it (Remove from list maybe?).
         
         return False
-
+    count = 0
     snake_population = []
     snacks = []
     to_be_killed = []
@@ -412,7 +418,6 @@ def play_game(gui = False, speed = 10, snakePos = (5,5)):
         pygame.time.delay(50)
         clock.tick(speed)
         # snake.move()
-
         # Iterate through all snakes. Indices of dead snakes (if any) are appended to to_be_killed list
         for i, _ in enumerate(snake_population):
             snake_dead = snake_population[i].think(snacks[i])
@@ -428,18 +433,27 @@ def play_game(gui = False, speed = 10, snakePos = (5,5)):
         
         to_be_killed = []
 
+        # End of a generation
         if len(snake_population) == 0:
-            # TODO: If all snakes are dead. Create new gen.
-            return GENERATION
+            snake_population, best = ga.nextGeneration(GENERATION, SIZE_POP, Snake, ((255,0,0)), (snakePos))
+            best_individuals.append(best)
+            GENERATION = []
+            count += 1
+            if count == number_of_gen:
+                return
+            for i, snake in enumerate(snake_population):
+                snacks.append(Cube(randomSnack(snake), color = (0,0,255)))
 
         # Drawing logic.
         if gui:
             redrawWindow(win, snake_population, snacks)
 
 
-# TODO: Calculate fitness, perform crossover, mutation.
+# TODO: Calculate Perform crossover, mutation.
 # TODO: OPTIONAL: Save all the weights of last population to continue training.
 # TODO: OPTIONAL: Save the weights of best performing snake.
 
-GENERATION = play_game(True, 20)
+play_game(True, 10, number_of_gen=1)
+filehandler = open('best_individuals.obj', 'wb')
+pickle.dump(best_individuals, filehandler)
 pygame.quit()

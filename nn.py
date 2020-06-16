@@ -13,14 +13,22 @@ def to_one_hot(x):
     return np.squeeze(output).tolist()
 
 class NeuralNetwork:
-    def __init__(self, layer_dims):
+    def __init__(self, layer_dims, parameters_provided = None):
         self.layers = layer_dims
         parameters = {}
         L = len(layer_dims)
-        for l in range(1, L):
-            parameters['W' + str(l)] = np.random.standard_normal((layer_dims[l], layer_dims[l-1]))
-            parameters['b' + str(l)] = np.random.standard_normal((layer_dims[l], 1))
-        self.parameters = parameters
+        if parameters_provided == None:
+            for l in range(1, L):
+                parameters['W' + str(l)] = np.random.uniform(-1, 1, (layer_dims[l], layer_dims[l-1]))
+                parameters['b' + str(l)] = np.random.uniform(-1, 1, (layer_dims[l], 1))
+            self.parameters = parameters
+        else:
+            self.parameters = parameters_provided
+
+
+    def copy(self):
+        newCopy = NeuralNetwork(self.layers, parameters_provided = self.parameters)
+        return newCopy
 
     def feedforward(self, inputs):
         def forward_one(A_prev, W, b):
@@ -38,6 +46,39 @@ class NeuralNetwork:
         AL = softmax(ZL)
         
         return AL, self.parameters
+
+
+def crossover(parent1, parent2):
+    offspring1 = parent1.copy()
+    offspring2 = parent2.copy()
+
+    mask = np.random.uniform(0, 1, size = offspring1.parameters['W1'].shape)
+    offspring1.parameters['W1'][mask > 0.5] = parent2.parameters['W1'][mask > 0.5]
+    offspring2.parameters['W1'][mask > 0.5] = parent1.parameters['W1'][mask > 0.5]
+
+    mask = np.random.uniform(0, 1, size = offspring1.parameters['W2'].shape)
+    offspring1.parameters['W2'][mask > 0.5] = parent2.parameters['W2'][mask > 0.5]
+    offspring2.parameters['W2'][mask > 0.5] = parent1.parameters['W2'][mask > 0.5]
+
+    mask = np.random.uniform(0, 1, size = offspring1.parameters['b1'].shape)
+    offspring1.parameters['b1'][mask > 0.5] = parent2.parameters['b1'][mask > 0.5]
+    offspring2.parameters['b1'][mask > 0.5] = parent1.parameters['b1'][mask > 0.5]
+
+    mask = np.random.uniform(0, 1, size = offspring1.parameters['b2'].shape)
+    offspring1.parameters['b2'][mask > 0.5] = parent2.parameters['b2'][mask > 0.5]
+    offspring2.parameters['b2'][mask > 0.5] = parent1.parameters['b2'][mask > 0.5]
+
+    return offspring1, offspring2
+
+def mutate(individual, prob_mutation=0.1):
+    for key, values in individual.parameters.items():
+        random_uniform_mutation(values, prob_mutation)
+
+
+def random_uniform_mutation(chromosome, prob_mutation):
+    mutation_array = np.random.random(chromosome.shape) < prob_mutation
+    uniform_mutation = np.random.uniform(-1, 1, size=chromosome.shape)
+    chromosome[mutation_array] = uniform_mutation[mutation_array]
 
 # X1 = [0.1, 0.524, 1, -0.1, -0.415, 0.85, 0.12, 0.23, -0.211, -0.45]
 # X2 = [-0.5234, -0.114, 1, 0.83754, 0.1, -0.901, -0.1, 0.5631, 0.4, -0.2131]
