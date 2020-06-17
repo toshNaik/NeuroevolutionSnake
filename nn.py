@@ -40,7 +40,7 @@ class NeuralNetwork:
 
         for l in range(1, L):
             Z = forward_one(A, self.parameters['W'+str(l)], self.parameters['b'+str(l)])
-            A = np.tanh(Z)
+            A = relu(Z)
 
         ZL = forward_one(A, self.parameters['W'+str(L)], self.parameters['b'+str(L)])
         AL = softmax(ZL)
@@ -70,10 +70,28 @@ def crossover(parent1, parent2):
 
     return offspring1, offspring2
 
-def mutate(individual, prob_mutation=0.1):
-    for key, values in individual.parameters.items():
-        random_uniform_mutation(values, prob_mutation)
+def mutate(individual, prob_mutation=0.05, mutation_type = 'gaussian'):
+    if mutation_type == 'gaussian':
+        for key, values in individual.parameters.items():
+            gaussian_mutation(values, prob_mutation)
+    elif mutation_type == 'uniform':
+        for key, values in individual.parameters.items():
+            random_uniform_mutation(values, prob_mutation)
+    return individual
 
+
+def gaussian_mutation(chromosome, prob_mutation):
+    """
+    Perform a gaussian mutation for each gene in an individual with probability, prob_mutation.
+    If mu and sigma are defined then the gaussian distribution will be drawn from that,
+    otherwise it will be drawn from N(0, 1) for the shape of the individual.
+    """
+    # Determine which genes will be mutated
+    mutation_array = np.random.random(chromosome.shape) < prob_mutation
+    
+    gaussian_mutation = np.random.normal(size=chromosome.shape)
+
+    chromosome[mutation_array] += gaussian_mutation[mutation_array]
 
 def random_uniform_mutation(chromosome, prob_mutation):
     mutation_array = np.random.random(chromosome.shape) < prob_mutation

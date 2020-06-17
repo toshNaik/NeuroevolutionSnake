@@ -5,20 +5,12 @@ import pickle
 def nextGeneration(population, SIZE_POP, className, *args):
     new_gen = []
     best_individual = calculateFitness(population)
-    parents1 = roulette_wheel(population, SIZE_POP//2)
-    parents2 = roulette_wheel(population, SIZE_POP//2)
+    parents1 = roulette_wheel(population, SIZE_POP)
 
-    for i in range(SIZE_POP//2):
-        child_brain1, child_brain2 = nn.crossover(parents1[i].brain, parents2[i].brain)
-        nn.mutate(child_brain1)
-        nn.mutate(child_brain2)
-        new_gen.append(className(*args, brain=child_brain1))
-        new_gen.append(className(*args, brain=child_brain2))
+    for i in range(SIZE_POP):
+        child_brain = nn.mutate(parents1[i].brain.copy())
+        new_gen.append(className(*args, brain=child_brain))
 
-    # for parent in population:
-    #     child = className(*args, brain = parent.brain)
-    #     new_gen.append(child)
-    
     return new_gen, best_individual
 
 def calculateFitness(population):
@@ -27,13 +19,22 @@ def calculateFitness(population):
     for i, individual in enumerate(population):
         steps = individual.total_steps
         score = individual.score
-        fitness_score = steps + (2**score+500*score**2.1)-(score**1.2*(0.25*steps)**1.3)
+        fitness_score = steps + (2**score+500*score**2)#-(score**1.2*(0.25*steps)**1.3)
         individual.fitness = fitness_score
         if fitness_score > max_fitness:
             max_fitness = fitness_score
             max_index = i
     best_individual = population[max_index].brain
     return best_individual
+
+def food_eating(population):
+    max_index = 0
+    max_score = 0
+    for i, individual in enumerate(population):
+        if individual.score > max_score:
+            max_score = individual.score
+            max_index = i
+    return population[max_index]
 
 def roulette_wheel(population, SIZE_POP):
     # TODO: Pick SIZE_POP parents from population.

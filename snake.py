@@ -5,7 +5,7 @@ import ga
 import pickle
 
 best_individuals = []
-SIZE_POP = 1000 #Must be even
+SIZE_POP = 500 #Must be even
 GENERATION = []
 
 ROWS = 10
@@ -357,15 +357,14 @@ def redrawWindow(window, snake, snack):
     Drawing function
     '''
     global ROWS, WIDTH
-    window.fill((0,0,0))
-    #snake.draw(window)
-    #snack.draw(window)
     apply_on_all(snake, 'draw', (window))
     apply_on_all(snack, 'draw', (window))
     pygame.display.update()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
+            save()
+    window.fill((0,0,0))
 
 def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view = False, brain = None):
     '''
@@ -392,12 +391,10 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
         
         if snake.body[0].pos[0] > ROWS-1 or snake.body[0].pos[0] < 0 or snake.body[0].pos[1] > ROWS-1 or snake.body[0].pos[1] < 0:
             return True
-            #TODO: Instead of reset, save copy of snake and kill it (Remove from list maybe?).
         
         for x in range(len(snake.body)):
             if snake.body[x].pos in list(map(lambda z:z.pos, snake.body[x+1:])):
                 return True
-                #TODO: Instead of reset, save copy of snake and kill it (Remove from list maybe?).
         
         return False
     count = 0
@@ -444,10 +441,14 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
                 pygame.quit()
             snake_population, best = ga.nextGeneration(GENERATION, SIZE_POP, Snake, ((255,0,0)), (snakePos))
             best_individuals.append(best)
-            GENERATION = []
             count += 1
+            print(count)
             if count == number_of_gen:
                 return
+            if count%5 == 0:
+                print('saving')
+                save(f'best_individuals_upto{count}.obj', f'generation_no{count}.obj')
+            GENERATION = []
             for i, snake in enumerate(snake_population):
                 snacks.append(Cube(randomSnack(snake), color = (0,0,255)))
 
@@ -456,15 +457,21 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
             redrawWindow(win, snake_population, snacks)
 
 
-# TODO: Calculate Perform crossover, mutation.
 # TODO: OPTIONAL: Save all the weights of last population to continue training.
-# TODO: OPTIONAL: Save the weights of best performing snake.
 def main():
-    play_game(True, speed=40, number_of_gen=200)
+    play_game(True, speed=1000, number_of_gen=15)
     pygame.quit()
-    filehandler = open('best_individuals.obj', 'wb')
-    pickle.dump(best_individuals, filehandler)
-    filehandler.close()
+    save()
+
+
+def save(filename1 = 'best_individuals.obj', filename2 = 'last_generation.obj'):
+    file1 = open(f'variables/individuals/{filename1}', 'wb')
+    pickle.dump(best_individuals, file1)
+    file1.close()
+    
+    file2 = open(f'variables/generations/{filename2}', 'wb')
+    pickle.dump(GENERATION, file2)
+    file2.close()
 
 if __name__ == '__main__':
     main()
