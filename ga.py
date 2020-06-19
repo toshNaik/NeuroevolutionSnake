@@ -8,7 +8,7 @@ def nextGeneration(population, SIZE_POP, className, *args):
     parents1 = roulette_wheel(population, SIZE_POP)
 
     for i in range(SIZE_POP):
-        child_brain = nn.mutate(parents1[i].brain.copy())
+        child_brain = nn.mutate(parents1[i].brain.copy(), prob_mutation=0.05)
         new_gen.append(className(*args, brain=child_brain))
 
     return new_gen, best_individual
@@ -19,7 +19,7 @@ def calculateFitness(population):
     for i, individual in enumerate(population):
         steps = individual.total_steps
         score = individual.score
-        fitness_score = steps + (2**score+500*score**2)#-(score**1.2*(0.25*steps)**1.3)
+        fitness_score = fitness_func(steps, score) 
         individual.fitness = fitness_score
         if fitness_score > max_fitness:
             max_fitness = fitness_score
@@ -37,7 +37,6 @@ def food_eating(population):
     return population[max_index]
 
 def roulette_wheel(population, SIZE_POP):
-    # TODO: Pick SIZE_POP parents from population.
     selection = []
     wheel = sum(individual.fitness for individual in population)
     for _ in range(SIZE_POP):
@@ -50,4 +49,6 @@ def roulette_wheel(population, SIZE_POP):
                 break
     return selection
 
-    # TODO: parent1 and parent2 are neural networks perform crossover and return new brain.
+def fitness_func(steps, score):
+    return steps + score**2 #- (score**1.2*(0.25*steps)**1.3)
+    

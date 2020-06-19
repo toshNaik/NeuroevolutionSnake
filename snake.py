@@ -4,14 +4,14 @@ import nn
 import ga
 import pickle
 
+SIZE_POP = 500 # Must be even
+ROWS = 15 # Number of rows in game
+WIDTH = 300 # Width of window
+
 best_individuals = []
-SIZE_POP = 500 #Must be even
 GENERATION = []
 
-ROWS = 10
-WIDTH = 300
 SQRT2 = 2**0.5
-
 UP = [1.0, 0.0, 0.0, 0.0]
 RIGHT = [0.0, 1.0, 0.0, 0.0]
 DOWN = [0.0, 0.0, 1.0, 0.0]
@@ -32,36 +32,56 @@ class Cube(object):
         self.diry = 0
         self.color = color
 
-    def isHorizontal(self, cube):
+    def isHorizontal(self, cube, distances = True):
         '''
         Returns horizontal distance between 2 cubes. (If their vertical distances are same). else returns 0
         '''
         if self.pos[1] == cube.pos[1]:
-            return self.pos[0] - cube.pos[0]
+            distance = self.pos[0] - cube.pos[0]
+            if distances:
+                return distance
+            else:
+                if distance > 0: return 1
+                else: return -1
         return 0
     
-    def isVertical(self, cube):
+    def isVertical(self, cube, distances = True):
         '''
         Returns vertical distance between 2 cubes. (If their horizontal distances are same). else returns 0
         '''
         if self.pos[0] == cube.pos[0]:
-            return self.pos[1] - cube.pos[1]
+            distance = self.pos[1] - cube.pos[1]
+            if distances:
+                return distance
+            else:
+                if distance > 0: return 1
+                else: return -1
         return 0
 
-    def is135or315(self, cube):
+    def is135or315(self, cube, distances = True):
         '''
         Returns distance between 2 cubes. (If they lie on the line x + y = 0). else returns 0
         '''
         if self.pos[0] - cube.pos[0] == self.pos[1] - cube.pos[1]:
-            return SQRT2 * (self.pos[0] - cube.pos[0])
+            distance = SQRT2 * (self.pos[0] - cube.pos[0])
+            if distances:
+                return distance
+            else:
+                if distance > 0: return 1
+                else: return -1
         return 0
 
-    def is45or225(self, cube):
+    def is45or225(self, cube, distances = True):
         '''
         Returns distance between 2 cubes. (If they lie on the line x - y = 0). else returns 0
         '''
         if self.pos[0] - cube.pos[0] == cube.pos[1] - self.pos[1]:
-            return SQRT2 * (self.pos[0] - cube.pos[0])
+            distance = SQRT2 * (self.pos[0] - cube.pos[0])
+            if distances:
+                return distance
+            else:
+                if distance > 0: return 1
+                else: return -1
         return 0
 
     def move(self, dirx, diry):
@@ -88,11 +108,13 @@ class Snake(object):
         self.head = Cube(pos)
         self.body = []
         self.body.append(self.head)
+        self.addCube()
+        self.addCube()
         self.turns = {}
         self.dirx = 0
         self.diry = 1
         if brain == None:
-            self.brain = nn.NeuralNetwork([28, 20, 12, 4])
+            self.brain = nn.NeuralNetwork([24, 16, 10, 4])
         else:
             self.brain = brain
         self.score = 0
@@ -113,7 +135,8 @@ class Snake(object):
         move = nn.to_one_hot(move)
         self.total_steps += 1
         self.steps_since_last_food += 1
-        if(self.steps_since_last_food == 100):
+        if(self.steps_since_last_food == ROWS**2):
+            self.total_steps -= self.steps_since_last_food*1.5
             return True
 
         if move == LEFT and (self.dirx != 1 and self.diry != 0):
@@ -165,33 +188,33 @@ class Snake(object):
         se = min(south, east) * SQRT2
         
         # DISTANCES FROM FOOD
-        h = self.head.isHorizontal(snack) / ROWS
-        v = self.head.isVertical(snack) / ROWS
-        d1 = self.head.is135or315(snack) / ROWS
-        d2 = self.head.is45or225(snack) / ROWS
+        h = self.head.isHorizontal(snack, False) #/ ROWS
+        v = self.head.isVertical(snack, False) #/ ROWS
+        d1 = self.head.is135or315(snack, False) #/ ROWS
+        d2 = self.head.is45or225(snack, False) #/ ROWS
         
-        leftFood = rightFood = aboveFood = belowFood = d135Food = d315Food = d225Food = d45Food = 0.
+        # leftFood = rightFood = aboveFood = belowFood = d135Food = d315Food = d225Food = d45Food = 0.
         
-        if h:
-            if h > 0:
-                leftFood = h / ROWS
-            else:
-                rightFood = -h / ROWS
-        elif v:
-            if v > 0:
-                aboveFood = v / ROWS
-            else:
-                belowFood = -v / ROWS
-        elif d1:
-            if d1 > 0:
-                d135Food = d1 / ROWS
-            else:
-                d315Food = -d1 / ROWS
-        elif d2:
-            if d2 > 0:
-                d225Food = d2 / ROWS
-            else:
-                d45Food = -d2 / ROWS
+        # if h:
+        #     if h > 0:
+        #         leftFood = h
+        #     else:
+        #         rightFood = -h
+        # elif v:
+        #     if v > 0:
+        #         aboveFood = v
+        #     else:
+        #         belowFood = -v
+        # elif d1:
+        #     if d1 > 0:
+        #         d135Food = d1
+        #     else:
+        #         d315Food = -d1
+        # elif d2:
+        #     if d2 > 0:
+        #         d225Food = d2
+        #     else:
+        #         d45Food = -d2
                 
         # DISTANCES FROM BODY PARTS
         left = [self.head.isHorizontal(x) for x in bodyPos if self.head.isHorizontal(x) > 0]
@@ -248,7 +271,7 @@ class Snake(object):
         elif self.body[-1].dirx == -1: tailDir = [0., 0., 0., 1.]
 
         dictionaryInputs = {'wall' : [north, ne, east, se, south, sw, west, nw],
-                            'food' : [aboveFood, d45Food, rightFood, d315Food, belowFood, d225Food, leftFood, d135Food],
+                            'food' : [h, d1, v, d2],
                             'body' : [above, d45, right, d315, below, d225, left, d135],
                             'head' : headDir,
                             'tail' : tailDir}
@@ -373,7 +396,7 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
     2. speed: Speed of animation.
     3. snakePos: Spawn location of snake.
     '''
-    global WIDTH, ROWS, GENERATION
+    global GENERATION
     def check_conditions(snake, snack):
         '''
         Checks:
@@ -385,7 +408,7 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
         '''
         if snake.body[0].pos == snack.pos:
             snake.addCube()
-            snake.score += 1
+            snake.score += 10
             snake.steps_since_last_food = 0
             snack.pos = randomSnack(snake)
         
@@ -397,11 +420,13 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
                 return True
         
         return False
+    
     count = 0
     snake_population = []
     snacks = []
     to_be_killed = []
-    win = pygame.display.set_mode((WIDTH, WIDTH))
+    if gui:
+        win = pygame.display.set_mode((WIDTH, WIDTH))
 
     # Create SIZE_POP snakes and corresponding snacks. Snake [i] can only 'interact' with snack[i].
     if view == False:
@@ -414,11 +439,14 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
         snacks.append(Cube(randomSnack(snake_population[0]), color=(0,0,255)))
 
     flag = True
-    clock = pygame.time.Clock()
+    
+    if gui:
+        clock = pygame.time.Clock()
     
     while flag:
-        pygame.time.delay(50)
-        clock.tick(speed)
+        if gui:
+            pygame.time.delay(50)
+            clock.tick(speed)
         # snake.move()
         # Iterate through all snakes. Indices of dead snakes (if any) are appended to to_be_killed list
         for i, _ in enumerate(snake_population):
@@ -445,7 +473,7 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
             print(count)
             if count == number_of_gen:
                 return
-            if count%5 == 0:
+            if count%50 == 0:
                 print('saving')
                 save(f'best_individuals_upto{count}.obj', f'generation_no{count}.obj')
             GENERATION = []
@@ -459,7 +487,7 @@ def play_game(gui = False, speed = 10, snakePos = (5,5), number_of_gen = 1, view
 
 # TODO: OPTIONAL: Save all the weights of last population to continue training.
 def main():
-    play_game(True, speed=1000, number_of_gen=15)
+    play_game(False, speed = 40, number_of_gen=600)
     pygame.quit()
     save()
 
@@ -476,3 +504,8 @@ def save(filename1 = 'best_individuals.obj', filename2 = 'last_generation.obj'):
 if __name__ == '__main__':
     main()
     print('Done!')
+    # filehandler = open('variables/generations/generation_no5.obj', 'rb')
+    # best_individuals = pickle.load(filehandler)
+    # filehandler.close()
+
+    # print(best_individuals[0])

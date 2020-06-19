@@ -20,8 +20,8 @@ class NeuralNetwork:
         L = len(layer_dims)
         if parameters_provided == None:
             for l in range(1, L):
-                parameters['W' + str(l)] = np.random.uniform(-1, 1, (layer_dims[l], layer_dims[l-1]))
-                parameters['b' + str(l)] = np.random.uniform(-1, 1, (layer_dims[l], 1))
+                parameters['W' + str(l)] = np.random.standard_normal((layer_dims[l], layer_dims[l-1]))
+                parameters['b' + str(l)] = np.random.standard_normal((layer_dims[l], 1))
             self.parameters = parameters
         else:
             self.parameters = parameters_provided
@@ -81,15 +81,10 @@ def mutate(individual, prob_mutation=0.05, mutation_type = 'gaussian'):
 
 
 def gaussian_mutation(chromosome, prob_mutation):
-    """
-    Perform a gaussian mutation for each gene in an individual with probability, prob_mutation.
-    If mu and sigma are defined then the gaussian distribution will be drawn from that,
-    otherwise it will be drawn from N(0, 1) for the shape of the individual.
-    """
-    # Determine which genes will be mutated
+
     mutation_array = np.random.random(chromosome.shape) < prob_mutation
     
-    gaussian_mutation = np.random.normal(size=chromosome.shape)
+    gaussian_mutation = np.random.normal(size=chromosome.shape) 
 
     chromosome[mutation_array] += gaussian_mutation[mutation_array]
 
@@ -97,25 +92,3 @@ def random_uniform_mutation(chromosome, prob_mutation):
     mutation_array = np.random.random(chromosome.shape) < prob_mutation
     uniform_mutation = np.random.uniform(-1, 1, size=chromosome.shape)
     chromosome[mutation_array] = uniform_mutation[mutation_array]
-
-# X1 = [0.1, 0.524, 1, -0.1, -0.415, 0.85, 0.12, 0.23, -0.211, -0.45]
-# X2 = [-0.5234, -0.114, 1, 0.83754, 0.1, -0.901, -0.1, 0.5631, 0.4, -0.2131]
-# X3 = [-0.512, 0.41, 0.123, -0.214, 0.4231]
-# X4 = [-0.901, -0.1, 0.5631, 0.4, -0.2131]
-# X5 = [0.85, 0.12, 0.23, -0.211, -0.45]
-# print(brain1.parameters['b2'])
-# print('\n')
-# print(brain2.parameters['b2'])
-# print('\n')
-
-# A, _ = brain.feedforward(X1)
-# print('----------------')
-
-# A, _ = brain.feedforward(X2)
-
-# # AL, _ = brain.feedforward(X3)
-# # print(AL)
-# # AL, _ = brain.feedforward(X4)
-# # print(AL)
-# # AL, _ = brain.feedforward(X5)
-# # print(AL)
