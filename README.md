@@ -1,4 +1,4 @@
 # NeuroevolutionSnake
 ## Uses neuroevolution (Neural networks + genetic algorithm)
-### Best model so far
+### One of the later generations' individual
 ![Demo](snake_gif.gif)
