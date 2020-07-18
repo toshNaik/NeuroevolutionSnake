@@ -20,8 +20,8 @@ class NeuralNetwork:
         L = len(layer_dims)
         if parameters_provided == None:
             for l in range(1, L):
-                parameters['W' + str(l)] = np.random.standard_normal((layer_dims[l], layer_dims[l-1]))
-                parameters['b' + str(l)] = np.random.standard_normal((layer_dims[l], 1))
+                parameters['W' + str(l)] = np.random.uniform(-1, 1, (layer_dims[l], layer_dims[l-1]))
+                parameters['b' + str(l)] = np.random.uniform(-1, 1, (layer_dims[l], 1))
             self.parameters = parameters
         else:
             self.parameters = parameters_provided
@@ -40,13 +40,11 @@ class NeuralNetwork:
 
         for l in range(1, L):
             Z = forward_one(A, self.parameters['W'+str(l)], self.parameters['b'+str(l)])
-            A = relu(Z)
+            A = sigmoid(Z)
 
         ZL = forward_one(A, self.parameters['W'+str(L)], self.parameters['b'+str(L)])
-        AL = softmax(ZL)
-        
+        AL = softmax(ZL - max(ZL))
         return AL, self.parameters
-
 
 def crossover(parent1, parent2):
     offspring1 = parent1.copy()
@@ -79,16 +77,17 @@ def mutate(individual, prob_mutation=0.05, mutation_type = 'gaussian'):
             random_uniform_mutation(values, prob_mutation)
     return individual
 
-
 def gaussian_mutation(chromosome, prob_mutation):
-
     mutation_array = np.random.random(chromosome.shape) < prob_mutation
-    
     gaussian_mutation = np.random.normal(size=chromosome.shape) 
-
     chromosome[mutation_array] += gaussian_mutation[mutation_array]
 
 def random_uniform_mutation(chromosome, prob_mutation):
     mutation_array = np.random.random(chromosome.shape) < prob_mutation
     uniform_mutation = np.random.uniform(-1, 1, size=chromosome.shape)
     chromosome[mutation_array] = uniform_mutation[mutation_array]
+
+# brain = NeuralNetwork([5,4,4])
+# X = [0.123, -0.134, 0.23, 0.124, -0.451]
+# AL, params = brain.feedforward(X)
+# print(AL)

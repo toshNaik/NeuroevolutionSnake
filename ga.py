@@ -2,13 +2,17 @@ import random
 import nn
 import pickle
 
+def fitness_func(steps, score):
+    return steps + (2**score + 500*(2**score)) #- ((score**1.2)*(0.25*steps)**1.3)
+
+
 def nextGeneration(population, SIZE_POP, className, *args):
     new_gen = []
     best_individual = calculateFitness(population)
-    parents1 = roulette_wheel(population, SIZE_POP)
+    parents = roulette_wheel(population, SIZE_POP)
 
     for i in range(SIZE_POP):
-        child_brain = nn.mutate(parents1[i].brain.copy(), prob_mutation=0.05)
+        child_brain = nn.mutate(parents[i].brain.copy(), prob_mutation=0.05)
         new_gen.append(className(*args, brain=child_brain))
 
     return new_gen, best_individual
@@ -27,15 +31,6 @@ def calculateFitness(population):
     best_individual = population[max_index].brain
     return best_individual
 
-def food_eating(population):
-    max_index = 0
-    max_score = 0
-    for i, individual in enumerate(population):
-        if individual.score > max_score:
-            max_score = individual.score
-            max_index = i
-    return population[max_index]
-
 def roulette_wheel(population, SIZE_POP):
     selection = []
     wheel = sum(individual.fitness for individual in population)
@@ -48,7 +43,3 @@ def roulette_wheel(population, SIZE_POP):
                 selection.append(individual)
                 break
     return selection
-
-def fitness_func(steps, score):
-    return steps + score**2 #- (score**1.2*(0.25*steps)**1.3)
-    
